@@ -1714,7 +1714,11 @@ func (c *Config) getSourceDirAbsPath(options *getSourceDirAbsPathOptions) (chezm
 	case err != nil:
 		c.sourceDirAbsPathErr = err
 	default:
-		c.sourceDirAbsPath = c.SourceDirAbsPath.JoinString(string(bytes.TrimSpace(data)))
+		rootPath := string(bytes.TrimSpace(data))
+		if rootPath == ".." || strings.HasPrefix(rootPath, "../") || strings.Contains(rootPath, "/../") {
+			return chezmoi.EmptyAbsPath, fmt.Errorf(".chezmoiroot: %s: invalid path", rootPath)
+		}
+		c.sourceDirAbsPath = c.SourceDirAbsPath.JoinString(rootPath)
 	}
 
 	return c.sourceDirAbsPath, c.sourceDirAbsPathErr
@@ -3126,7 +3130,22 @@ func (c *Config) writeOutput(data []byte, perm fs.FileMode) error {
 		_, err := c.stdout.Write(data)
 		return err
 	}
-	return os.WriteFile(c.outputAbsPath.String(), data, perm)
+	file, err := os.OpenFile(c.outputAbsPath.String(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if fileInfo.Mode().Perm()&^perm != 0 {
+		if err := file.Chmod(fileInfo.Mode().Perm() & perm); err != nil {
+			return err
+		}
+	}
+	_, err = file.Write(data)
+	return err
 }
 
 // writeOutputString writes data to the configured output.
