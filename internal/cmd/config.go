@@ -533,6 +533,7 @@ func newConfig(options ...configOption) (*Config, error) {
 		"glob":                        c.globTemplateFunc,
 		"globCaseInsensitive":         c.globCaseInsensitiveTemplateFunc,
 		"gopass":                      c.gopassTemplateFunc,
+		"gopassCat":                   c.gopassCatTemplateFunc,
 		"gopassRaw":                   c.gopassRawTemplateFunc,
 		"hexDecode":                   c.hexDecodeTemplateFunc,
 		"hexEncode":                   c.hexEncodeTemplateFunc,
@@ -1714,11 +1715,11 @@ func (c *Config) getSourceDirAbsPath(options *getSourceDirAbsPathOptions) (chezm
 	case err != nil:
 		c.sourceDirAbsPathErr = err
 	default:
-		rootPath := string(bytes.TrimSpace(data))
-		if rootPath == ".." || strings.HasPrefix(rootPath, "../") || strings.Contains(rootPath, "/../") {
-			return chezmoi.EmptyAbsPath, fmt.Errorf(".chezmoiroot: %s: invalid path", rootPath)
+		rootRelPath, err := chezmoi.NewUntrustedRelPath(string(bytes.TrimSpace(data)))
+		if err != nil {
+			return chezmoi.EmptyAbsPath, fmt.Errorf("%s: %w", chezmoi.RootName, err)
 		}
-		c.sourceDirAbsPath = c.SourceDirAbsPath.JoinString(rootPath)
+		c.sourceDirAbsPath = c.SourceDirAbsPath.Join(rootRelPath)
 	}
 
 	return c.sourceDirAbsPath, c.sourceDirAbsPathErr
