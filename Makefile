@@ -1,9 +1,18 @@
 GO?=go
-GOOS=$(shell ${GO} env GOOS)
-GOARCH=$(shell ${GO} env GOARCH)
+HOST_GOOS=$(shell ${GO} env GOOS)
+GOOS?=${HOST_GOOS}
+HOST_GOARCH=$(shell ${GO} env GOARCH)
+GOARCH?=${HOST_GOARCH}
 GOLANGCI_LINT_VERSION=$(shell awk '/GOLANGCI_LINT_VERSION:/ { print $$2 }' .github/workflows/main.yml)
+GOLANGCI_LINT_BASENAME=golangci-lint-${GOLANGCI_LINT_VERSION}-${HOST_GOOS}-${HOST_GOARCH}
 GORELEASER_VERSION=$(shell awk '/GORELEASER_VERSION:/ { print $$2 }' .github/workflows/main.yml)
+ifeq ($(HOST_GOOS),darwin)
+	GORELEASER_BASENAME=goreleaser_Darwin_$(shell echo ${HOST_GOARCH} | sed 's/amd64/x86_64/')
+else
+	GORELEASER_BASENAME=goreleaser_$(shell echo ${HOST_GOOS} | sed 's/^./\U&\E/g')_$(shell echo ${HOST_GOARCH} | sed 's/amd64/x86_64/')
+endif
 SYFT_VERSION=$(shell awk '/SYFT_VERSION:/ { print $$2 }' .github/workflows/main.yml)
+SYFT_BASENAME=syft_${SYFT_VERSION}_${HOST_GOOS}_$(shell ${GO} env GOARCH)
 UPSTREAM=$(shell git remote -v | awk '/github.com[:\/]twpayne\/chezmoi(.git)? \(fetch\)/ {print $$1}')
 ifdef VERSION
 	GO_LDFLAGS+=-X main.version=${VERSION}
@@ -146,19 +155,19 @@ ensure-tools: \
 .PHONY: ensure-golangci-lint
 ensure-golangci-lint:
 	if [ ! -x bin/golangci-lint ] || ( ./bin/golangci-lint version | grep -Fqv "version ${GOLANGCI_LINT_VERSION}" ) ; then \
-		curl -sSfL https://golangci-lint.run/install.sh | sh -s -- v${GOLANGCI_LINT_VERSION} ; \
+		curl -fsLS "https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/${GOLANGCI_LINT_BASENAME}.tar.gz" | tar -C bin --strip-components 1 -xzf - "${GOLANGCI_LINT_BASENAME}/golangci-lint" ; \
 	fi
 
 .PHONY: ensure-goreleaser
 ensure-goreleaser:
-	if [ ! -x bin/goreleaser ] || ( ./bin/goreleaser --version | grep -Fqv "${GORELEASER_VERSION}" ) ; then \
-		GOBIN=$(shell pwd)/bin ${GO} install "github.com/goreleaser/goreleaser/v2@v${GORELEASER_VERSION}" ; \
+	if [ ! -x bin/goreleaser ] || ! ( ./bin/goreleaser --version | grep -Fq "${GORELEASER_VERSION}" ) ; then \
+		curl -fsLS "https://github.com/goreleaser/goreleaser/releases/download/v${GORELEASER_VERSION}/${GORELEASER_BASENAME}.tar.gz" | tar -C bin -xzf - goreleaser ; \
 	fi
 
 .PHONY: ensure-syft
 ensure-syft:
 	if [ ! -x bin/syft ] || ( ./bin/syft --version | grep -Fqv "${SYFT_VERSION}" ) ; then \
-		curl -fsLS https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_$(shell ${GO} env GOOS)_$(shell ${GO} env GOARCH).tar.gz | tar -C bin -xzf - syft ; \
+		curl -fsLS "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${SYFT_BASENAME}.tar.gz" | tar -C bin -xzf - syft ; \
 	fi
 
 .PHONY: generate
