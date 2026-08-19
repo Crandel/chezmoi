@@ -28,12 +28,12 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/bartventer/httpcache"
 	"github.com/betterleaks/betterleaks/detect"
 	"github.com/coreos/go-semver/semver"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/format/diff"
+	"github.com/go-sprout/sprout/sprigin"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
@@ -383,7 +383,7 @@ func newConfig(options ...configOption) (*Config, error) {
 		// Global configuration.
 		configFormat:  newChoiceFlag("", readDataFormatValues),
 		homeDir:       userHomeDir,
-		templateFuncs: sprig.TxtFuncMap(),
+		templateFuncs: sprigin.TxtFuncMap(),
 
 		// Command configurations.
 		apply: applyCmdConfig{
@@ -475,12 +475,14 @@ func newConfig(options ...configOption) (*Config, error) {
 	// map first to avoid a duplicate function panic.
 	for _, templateFunc := range []string{
 		"fromJson",
+		"fromYaml",
 		"quote",
 		"splitList",
 		"squote",
 		"toPrettyJson",
 		"toString",
 		"toStrings",
+		"toYaml",
 	} {
 		if _, ok := c.templateFuncs[templateFunc]; !ok {
 			panic(templateFunc + ": deleting non-existent template function")
@@ -878,7 +880,9 @@ func (c *Config) createAndReloadConfigFile(cmd *cobra.Command) error {
 		return err
 	}
 	c.templateData.sourceDir = sourceDirAbsPath.String()
-	os.Setenv("CHEZMOI_SOURCE_DIR", sourceDirAbsPath.String())
+	if err := os.Setenv("CHEZMOI_SOURCE_DIR", sourceDirAbsPath.String()); err != nil {
+		return err
+	}
 
 	// Find config template, execute it, and create config file.
 	configTemplate, err := c.findConfigTemplate()
@@ -1391,7 +1395,7 @@ func (c *Config) editor(args []string) (string, []string, error) {
 
 // errorf writes an error to stderr.
 func (c *Config) errorf(format string, args ...any) {
-	fmt.Fprintf(c.stderr, "chezmoi: "+format, args...)
+	_, _ = fmt.Fprintf(c.stderr, "chezmoi: "+format, args...)
 }
 
 // execute creates a new root command and executes it with args.
@@ -2637,7 +2641,9 @@ func (c *Config) persistentPreRunRootE(cmd *cobra.Command, args []string) error 
 	}
 
 	templateData := c.getTemplateData(cmd)
-	os.Setenv("CHEZMOI", "1")
+	if err := os.Setenv("CHEZMOI", "1"); err != nil {
+		return err
+	}
 	for key, value := range map[string]string{
 		"ARCH":          templateData.arch,
 		"ARGS":          strings.Join(templateData.args, " "),
@@ -2659,10 +2665,14 @@ func (c *Config) persistentPreRunRootE(cmd *cobra.Command, args []string) error 
 		"USERNAME":      templateData.username,
 		"WORKING_TREE":  templateData.workingTree,
 	} {
-		os.Setenv("CHEZMOI_"+key, value)
+		if err := os.Setenv("CHEZMOI_"+key, value); err != nil {
+			return err
+		}
 	}
 	if c.Verbose {
-		os.Setenv("CHEZMOI_VERBOSE", "1")
+		if err := os.Setenv("CHEZMOI_VERBOSE", "1"); err != nil {
+			return err
+		}
 	}
 	for groupKey, group := range map[string]map[string]any{
 		"KERNEL":          templateData.kernel,
@@ -2681,7 +2691,9 @@ func (c *Config) persistentPreRunRootE(cmd *cobra.Command, args []string) error 
 			default:
 				panic(fmt.Errorf("%s has unexpected type %T", key, value))
 			}
-			os.Setenv(key, valueStr)
+			if err := os.Setenv(key, valueStr); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -3137,7 +3149,7 @@ func (c *Config) writeOutput(data []byte, perm fs.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return err
