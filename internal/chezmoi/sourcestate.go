@@ -1098,7 +1098,7 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 			}
 			return nil
 		case fileInfo.IsDir():
-			da, err := parseDirAttr(sourceName.String())
+			dirAttr, err := parseDirAttr(sourceName.String())
 			if err != nil {
 				return err
 			}
@@ -1106,14 +1106,14 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 			if err != nil {
 				return err
 			}
-			targetRelPath = targetRelPath.JoinString(da.TargetName)
+			targetRelPath = targetRelPath.JoinString(dirAttr.TargetName)
 			if s.Ignore(targetRelPath) {
 				return fs.SkipDir
 			}
-			sourceStateDir := s.newSourceStateDir(sourceAbsPath, sourceRelPath, da)
+			sourceStateDir := s.newSourceStateDir(sourceAbsPath, sourceRelPath, dirAttr)
 			addSourceStateEntries(targetRelPath, sourceStateDir)
-			if da.External {
-				sourceStateEntries, err := s.readExternalDir(sourceAbsPath, sourceRelPath, targetRelPath, da)
+			if dirAttr.External {
+				sourceStateEntries, err := s.readExternalDir(sourceAbsPath, sourceRelPath, targetRelPath, dirAttr)
 				if err != nil {
 					return err
 				}
@@ -1131,7 +1131,7 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 			}
 			return nil
 		case fileInfo.Mode().IsRegular():
-			fa, err := parseFileAttr(sourceName.String(), s.encryption.EncryptedSuffix())
+			fileAttr, err := parseFileAttr(sourceName.String(), s.encryption.EncryptedSuffix())
 			if err != nil {
 				return err
 			}
@@ -1139,12 +1139,12 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 			if err != nil {
 				return err
 			}
-			targetRelPath = targetRelPath.JoinString(fa.TargetName)
+			targetRelPath = targetRelPath.JoinString(fileAttr.TargetName)
 			if s.Ignore(targetRelPath) {
 				return nil
 			}
 			var sourceStateEntry SourceStateEntry
-			targetRelPath, sourceStateEntry = s.newSourceStateFile(sourceAbsPath, sourceRelPath, fa, targetRelPath)
+			targetRelPath, sourceStateEntry = s.newSourceStateFile(sourceAbsPath, sourceRelPath, fileAttr, targetRelPath)
 			addSourceStateEntries(targetRelPath, sourceStateEntry)
 			return nil
 		default:
@@ -2934,23 +2934,23 @@ func (s *SourceState) readScriptsDir(ctx context.Context, scriptsDirAbsPath AbsP
 		case fileInfo.IsDir():
 			return nil
 		case fileInfo.Mode().IsRegular():
-			fa, err := parseFileAttr(sourceName.String(), s.encryption.EncryptedSuffix())
+			fileAttr, err := parseFileAttr(sourceName.String(), s.encryption.EncryptedSuffix())
 			if err != nil {
 				return err
 			}
-			if fa.Type != SourceFileTypeScript {
+			if fileAttr.Type != SourceFileTypeScript {
 				return fmt.Errorf("%s: not a script", sourceAbsPath)
 			}
 			targetRelPath, err := parentSourceRelPath.Dir().TargetRelPath(s.encryption.EncryptedSuffix())
 			if err != nil {
 				return err
 			}
-			targetRelPath = targetRelPath.JoinString(fa.TargetName)
+			targetRelPath = targetRelPath.JoinString(fileAttr.TargetName)
 			if s.Ignore(targetRelPath) {
 				return nil
 			}
 			var sourceStateEntry SourceStateEntry
-			targetRelPath, sourceStateEntry = s.newSourceStateFile(sourceAbsPath, sourceRelPath, fa, targetRelPath)
+			targetRelPath, sourceStateEntry = s.newSourceStateFile(sourceAbsPath, sourceRelPath, fileAttr, targetRelPath)
 			addSourceStateEntry(targetRelPath, sourceStateEntry)
 			return nil
 		default:

@@ -339,7 +339,7 @@ func (o gitCloneOptionsLogValuer) LogValue() slog.Value {
 		attrs = append(attrs, slog.String("URL", o.URL))
 	}
 	if o.Auth != nil {
-		attrs = append(attrs, chezmoilog.Stringer("Auth", o.Auth))
+		attrs = append(attrs, slog.String("Auth", "$AUTH"))
 	}
 	if o.RemoteName != "" {
 		attrs = append(attrs, slog.String("RemoteName", o.RemoteName))
