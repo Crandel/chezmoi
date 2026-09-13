@@ -15,7 +15,7 @@ concurrency:
 env:
   GO_VERSION: 1.27.1 # https://go.dev/doc/devel/release
   PYTHON_VERSION: '3.14' # https://www.python.org/downloads/
-  UV_VERSION: 0.12.10 # https://github.com/astral-sh/uv/releases
+  UV_VERSION: 0.12.13 # https://github.com/astral-sh/uv/releases
   NO_MKDOCS_2_WARNING: 1
 jobs:
   build-docs:
@@ -30,7 +30,7 @@ jobs:
       with:
         cache-prefix: website-go
         go-version: ${{ env.GO_VERSION }}
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4   # v10.1.0
       with:
         enable-cache: false
         version: ${{ env.UV_VERSION }}
