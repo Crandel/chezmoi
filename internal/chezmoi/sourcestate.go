@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -39,15 +40,72 @@ import (
 )
 
 // An ExternalType is a type of external source.
-type ExternalType string
+type ExternalType int
 
 // ExternalTypes.
 const (
-	ExternalTypeArchive     ExternalType = "archive"
-	ExternalTypeArchiveFile ExternalType = "archive-file"
-	ExternalTypeFile        ExternalType = "file"
-	ExternalTypeGitRepo     ExternalType = "git-repo"
+	ExternalTypeNone ExternalType = iota
+	ExternalTypeArchive
+	ExternalTypeArchiveFile
+	ExternalTypeFile
+	ExternalTypeGitRepo
 )
+
+var (
+	externalTypeStrs = map[ExternalType]string{
+		ExternalTypeArchive:     "archive",
+		ExternalTypeArchiveFile: "archive-file",
+		ExternalTypeFile:        "file",
+		ExternalTypeGitRepo:     "git-repo",
+	}
+	externalTypeValues = map[string]ExternalType{
+		"archive":      ExternalTypeArchive,
+		"archive-file": ExternalTypeArchiveFile,
+		"file":         ExternalTypeFile,
+		"git-repo":     ExternalTypeGitRepo,
+	}
+	errMissingExternalType = errors.New("missing external type")
+)
+
+func (t ExternalType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
+
+func (t ExternalType) MarshalText() ([]byte, error) {
+	return []byte(t.String()), nil
+}
+
+func (t ExternalType) String() string {
+	return externalTypeStrs[t]
+}
+
+func (t *ExternalType) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		return errMissingExternalType
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	value, ok := externalTypeValues[s]
+	if !ok {
+		return fmt.Errorf("%s: invalid external type", s)
+	}
+	*t = value
+	return nil
+}
+
+func (t *ExternalType) UnmarshalText(data []byte) error {
+	if len(data) == 0 {
+		return errMissingExternalType
+	}
+	value, ok := externalTypeValues[string(data)]
+	if !ok {
+		return fmt.Errorf("%s: invalid external type", string(data))
+	}
+	*t = value
+	return nil
+}
 
 var (
 	commentRx                       = regexp.MustCompile(`(?:\A|\s+)#.*(?:\r?\n)?$`)
@@ -478,17 +536,27 @@ DEST_ABS_PATH:
 					}
 					continue
 				}
-				switch sourceStateDir, ok := node.SourceStateEntry.(*SourceStateDir); {
-				case i != len(nodes)-1 && !ok:
-					panic(fmt.Errorf("nodes[%d]: unexpected non-terminal source state entry, got %T", i, node.SourceStateEntry))
-				case ok && sourceStateDir.attr.External:
-					targetRelPathComponents := targetRelPath.SplitAll()
-					externalDirRelPath := EmptyRelPath.Join(targetRelPathComponents[:i]...)
-					externalDirRelPaths.Add(externalDirRelPath)
-					if options.Errorf != nil {
-						options.Errorf("%s: skipping entries in external_ directory\n", externalDirRelPath)
+				switch sourceStateEntry := node.SourceStateEntry.(type) {
+				case *SourceStateDir:
+					if sourceStateEntry.attr.External {
+						targetRelPathComponents := targetRelPath.SplitAll()
+						externalDirRelPath := EmptyRelPath.Join(targetRelPathComponents[:i]...)
+						externalDirRelPaths.Add(externalDirRelPath)
+						if options.Errorf != nil {
+							options.Errorf("%s: skipping entries in external_ directory\n", externalDirRelPath)
+						}
+						continue DEST_ABS_PATH
 					}
-					continue DEST_ABS_PATH
+				case *SourceStateImplicitDir:
+					if sourceStateEntry.Origin().IsExternal() {
+						targetRelPathComponents := targetRelPath.SplitAll()
+						externalDirRelPath := EmptyRelPath.Join(targetRelPathComponents[:i]...)
+						externalDirRelPaths.Add(externalDirRelPath)
+						if options.Errorf != nil {
+							options.Errorf("%s: skipping entries in external_ implicit directory\n", externalDirRelPath)
+						}
+						continue DEST_ABS_PATH
+					}
 				}
 			}
 			parentSourceRelPath = nodes[len(nodes)-1].SourceStateEntry.SourceRelPath()
@@ -2413,6 +2481,8 @@ func (s *SourceState) readExternal(
 	options *ReadOptions,
 ) (map[RelPath][]SourceStateEntry, error) {
 	switch external.Type {
+	case ExternalTypeNone:
+		return nil, fmt.Errorf("%s: missing external type", externalRelPath)
 	case ExternalTypeArchive:
 		return s.readExternalArchive(ctx, externalRelPath, parentSourceRelPath, external, options)
 	case ExternalTypeArchiveFile:
@@ -2421,10 +2491,8 @@ func (s *SourceState) readExternal(
 		return s.readExternalFile(ctx, externalRelPath, parentSourceRelPath, external, options)
 	case ExternalTypeGitRepo:
 		return nil, nil
-	case "":
-		return nil, fmt.Errorf("%s: missing external type", externalRelPath)
 	default:
-		return nil, fmt.Errorf("%s: unknown external type: %s", externalRelPath, external.Type)
+		return nil, fmt.Errorf("%s: unknown external type: %d", externalRelPath, external.Type)
 	}
 }
 
