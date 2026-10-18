@@ -18,12 +18,12 @@ env:
   CHOCOLATEY_VERSION: 2.7.4 # https://github.com/chocolatey/choco/releases
   COSIGN_VERSION: 3.1.3 # https://github.com/sigstore/cosign/releases
   GO_VERSION: 1.27.2 # https://go.dev/doc/devel/release
-  GOLANGCI_LINT_VERSION: 2.14.0 # https://github.com/golangci/golangci-lint/releases
+  GOLANGCI_LINT_VERSION: 2.15.0 # https://github.com/golangci/golangci-lint/releases
   GORELEASER_VERSION: 2.18.3 # https://github.com/goreleaser/goreleaser/releases
   PYTHON_VERSION: '3.14' # https://www.python.org/downloads/
   RAGE_VERSION: 0.12.1 # https://github.com/str4d/rage/releases
   SYFT_VERSION: 1.54.1 # https://github.com/anchore/syft/releases
-  UV_VERSION: 0.13.0 # https://github.com/astral-sh/uv/releases
+  UV_VERSION: 0.13.1 # https://github.com/astral-sh/uv/releases
   NO_MKDOCS_2_WARNING: 1
 jobs:
   changes:
@@ -227,7 +227,7 @@ jobs:
         make create-syso
     - name: build-release
       if: github.event_name == 'push' || needs.changes.outputs.code == 'true'
-      uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94   # v7.2.3
+      uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de   # v7.3.0
       with:
         version: ${{ env.GORELEASER_VERSION }}
         args: release --skip=sign --snapshot --timeout=1h
@@ -498,7 +498,7 @@ jobs:
     - name: create-syso
       run: |
         make create-syso
-    - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94   # v7.2.3
+    - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de   # v7.3.0
       with:
         version: ${{ env.GORELEASER_VERSION }}
         args: release --timeout=1h
