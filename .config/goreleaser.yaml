@@ -65,8 +65,8 @@ builds:
   - riscv64
   - s390x
   goarm:
-  - '5,softfloat'
-  - '6,hardfloat'
+  - 5,softfloat
+  - 6,hardfloat
   ldflags:
   - -s
   - -w
@@ -146,8 +146,6 @@ changelog:
 
 checksum:
   extra_files:
-  - glob: ./dist/chezmoi-nocgo_darwin_amd64_v1/chezmoi
-    name_template: chezmoi-darwin-amd64
   - glob: ./dist/chezmoi-nocgo_darwin_arm64_v8.0/chezmoi
     name_template: chezmoi-darwin-arm64
   - glob: ./dist/chezmoi-cgo-glibc_linux_amd64_v1/chezmoi
@@ -173,12 +171,12 @@ nfpms:
   - rpm
   bindir: /usr/bin
   msix:
-    publisher: 'CN=chezmoi.io'
+    publisher: CN=chezmoi.io
     properties:
       logo: ./assets/images/logo-256px-square.png
     applications:
-      - id: chezmoi
-        executable: chezmoi.exe
+    - id: chezmoi
+      executable: chezmoi.exe
   overrides:
     deb:
       file_name_template: >-
@@ -256,8 +254,6 @@ release:
   extra_files:
   - glob: ./assets/cosign/cosign.pub
     name_template: chezmoi_cosign.pub
-  - glob: ./dist/chezmoi-nocgo_darwin_amd64_v1/chezmoi
-    name_template: chezmoi-darwin-amd64
   - glob: ./dist/chezmoi-nocgo_darwin_arm64_v8.0/chezmoi
     name_template: chezmoi-darwin-arm64
   - glob: ./dist/chezmoi-cgo-glibc_linux_amd64_v1/chezmoi
@@ -292,7 +288,7 @@ scoops:
 signs:
 - cmd: cosign
   stdin: '{{ .Env.COSIGN_PWD }}'
-  signature: '${artifact}.sigstore.json'
+  signature: ${artifact}.sigstore.json
   args:
   - sign-blob
   - --key=assets/cosign/cosign.key

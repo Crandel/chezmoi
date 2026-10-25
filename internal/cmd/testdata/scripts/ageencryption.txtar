@@ -1,5 +1,3 @@
-[!exec:age] skip 'age not found in $PATH'
-
 mkhomedir
 mkageconfig
 
@@ -49,12 +47,32 @@ cmp stdout golden/.encrypted
 
 # test that chezmoi --use-builtin-age=true encrypts a file than age then decrypts
 exec chezmoi --use-builtin-age=true --output=$WORK${/}encrypted.age encrypt golden/.encrypted
-exec chezmoi --use-builtin-age=false decrypt $WORK${/}encrypted.age
-cmp stdout golden/.encrypted
+[exec:age] exec chezmoi --use-builtin-age=false decrypt $WORK${/}encrypted.age
+[exec:age] cmp stdout golden/.encrypted
 
 # test that chezmoi edit --apply transparently decrypts and re-encrypts
 exec chezmoi edit --apply --force $HOME${/}.encrypted
 grep '# edited' $HOME/.encrypted
 
+[windows] skip 'UNIX only'
+
+chhome home2/user
+
+mkageconfig
+chmod 644 $HOME/key.txt
+
+# test that chezmoi encrypt returns an error if the identity is group- or world-readable
+! exec chezmoi encrypt --use-builtin-age=true golden/plaintext
+stderr 'identity file has group and/or world permissions'
+
+# test that chezmoi decrypt returns an error if the identity is group- or world-readable
+! exec chezmoi decrypt --use-builtin-age=true golden/ciphertext
+stderr 'identity file has group and/or world permissions'
+
 -- golden/.encrypted --
 # contents of .encrypted
+-- golden/ciphertext --
+-----BEGIN AGE ENCRYPTED FILE-----
+-----END AGE ENCRYPTED FILE-----
+-- golden/plaintext --
+# plaintext
