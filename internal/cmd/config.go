@@ -774,7 +774,7 @@ func (c *Config) applyArgs(
 	}
 
 	if keptGoingAfterErr {
-		return chezmoi.ExitCodeError(1)
+		return chezmoi.NewExitWithCodeError(1)
 	}
 
 	return nil
@@ -1167,7 +1167,7 @@ func (c *Config) defaultPreApplyFunc(
 	case mode == promptNone:
 		return nil
 	case mode == promptConflict && c.errorOnConflict:
-		return chezmoi.ExitCodeError(1)
+		return chezmoi.NewExitWithCodeError(1)
 	case mode == promptConflict && c.skipConflicts:
 		return fs.SkipDir
 	}
@@ -1234,7 +1234,7 @@ func (c *Config) defaultPreApplyFunc(
 		case choice == "skip":
 			return fs.SkipDir
 		case choice == "quit":
-			return chezmoi.ExitCodeError(0)
+			return chezmoi.NewExitWithCodeError(0)
 		default:
 			panic(choice + ": unexpected choice")
 		}
@@ -2967,7 +2967,7 @@ func (c *Config) sourceAbsPaths(sourceState *chezmoi.SourceState, args []string)
 
 func (c *Config) targetRelPath(absPath chezmoi.AbsPath) (chezmoi.RelPath, error) {
 	relPath, err := absPath.TrimDirPrefix(c.DestDirAbsPath)
-	if notInAbsDirError := (&chezmoi.NotInAbsDirError{}); errors.As(err, &notInAbsDirError) {
+	if _, ok := errors.AsType[*chezmoi.NotInAbsDirError](err); ok {
 		return chezmoi.EmptyRelPath, fmt.Errorf("%s: not in destination directory (%s)", absPath, c.DestDirAbsPath)
 	}
 	return relPath, err
