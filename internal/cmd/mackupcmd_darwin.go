@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"chezmoi.io/chezmoi/v2/internal/chezmoi"
+	"chezmoi.io/chezmoi/v2/internal/chezmoiregexp"
 )
 
 var (
-	mackupCommentRx  = regexp.MustCompile(`\A#.*\n\z`)
-	mackupKeyValueRx = regexp.MustCompile(`\A(\w+)\s*=\s*(.*)\z`)
-	mackupSectionRx  = regexp.MustCompile(`\A\[(.*)\]\n\z`)
+	mackupCommentRegexpFunc  = chezmoiregexp.MustCompileOnce(`\A#.*\n\z`)
+	mackupKeyValueRegexpFunc = chezmoiregexp.MustCompileOnce(`\A(\w+)\s*=\s*(.*)\z`)
+	mackupSectionRegexpFunc  = chezmoiregexp.MustCompileOnce(`\A\[(.*)\]\n\z`)
 )
 
 type mackupApplicationApplicationConfig struct {
@@ -149,10 +149,10 @@ func parseMackupApplication(data []byte) (*mackupApplicationConfig, error) {
 	var config mackupApplicationConfig
 	var section string
 	for line := range strings.Lines(string(data)) {
-		if mackupCommentRx.MatchString(line) {
+		if mackupCommentRegexpFunc().MatchString(line) {
 			continue
 		}
-		if m := mackupSectionRx.FindStringSubmatch(line); m != nil {
+		if m := mackupSectionRegexpFunc().FindStringSubmatch(line); m != nil {
 			section = m[1]
 			continue
 		}
@@ -162,7 +162,7 @@ func parseMackupApplication(data []byte) (*mackupApplicationConfig, error) {
 		}
 		switch section {
 		case "application":
-			if m := mackupKeyValueRx.FindStringSubmatch(line); m != nil {
+			if m := mackupKeyValueRegexpFunc().FindStringSubmatch(line); m != nil {
 				if m[1] == "name" {
 					config.Application.Name = m[2]
 				}

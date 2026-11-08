@@ -74,7 +74,7 @@ type Status struct {
 }
 
 var (
-	statusPorcelainV2ZOrdinaryRxFn = chezmoiregexp.MustCompileRegexpOnce(`` +
+	statusPorcelainV2ZOrdinaryRegexpFunc = chezmoiregexp.MustCompileOnce(`` +
 		`^1 ` +
 		`([!\.\?ACDMRU])([!\.\?ACDMRU]) ` +
 		`(N\.\.\.|S[\.C][\.M][\.U]) ` +
@@ -86,7 +86,7 @@ var (
 		`(.*)` +
 		`$`,
 	)
-	statusPorcelainV2ZRenamedOrCopiedRxFn = chezmoiregexp.MustCompileRegexpOnce(`` +
+	statusPorcelainV2ZRenamedOrCopiedRegexpFunc = chezmoiregexp.MustCompileOnce(`` +
 		`^2 ` +
 		`([!\.\?ACDMRU])([!\.\?ACDMRU]) ` +
 		`(N\.\.\.|S[\.C][\.M][\.U]) ` +
@@ -99,7 +99,7 @@ var (
 		`(.*?)\t(.*)` +
 		`$`,
 	)
-	statusPorcelainV2ZUnmergedRxFn = chezmoiregexp.MustCompileRegexpOnce(`` +
+	statusPorcelainV2ZUnmergedRegexpFunc = chezmoiregexp.MustCompileOnce(`` +
 		`^u ` +
 		`([!\.\?ACDMRU])([!\.\?ACDMRU]) ` +
 		`(N\.\.\.|S[\.C][\.M][\.U]) ` +
@@ -113,12 +113,12 @@ var (
 		`(.*)` +
 		`$`,
 	)
-	statusPorcelainV2ZUntrackedRxFn = chezmoiregexp.MustCompileRegexpOnce(`` +
+	statusPorcelainV2ZUntrackedRegexpFunc = chezmoiregexp.MustCompileOnce(`` +
 		`^\? ` +
 		`(.*)` +
 		`$`,
 	)
-	statusPorcelainV2ZIgnoredRxFn = chezmoiregexp.MustCompileRegexpOnce(`` +
+	statusPorcelainV2ZIgnoredRegexpFunc = chezmoiregexp.MustCompileOnce(`` +
 		`^! ` +
 		`(.*)` +
 		`$`,
@@ -143,7 +143,7 @@ func ParseStatusPorcelainV2(output []byte) (*Status, error) {
 		}
 		switch line[0] {
 		case '1':
-			m := statusPorcelainV2ZOrdinaryRxFn().FindStringSubmatchIndex(line)
+			m := statusPorcelainV2ZOrdinaryRegexpFunc().FindStringSubmatchIndex(line)
 			if m == nil {
 				return nil, ParseError(line)
 			}
@@ -172,7 +172,7 @@ func ParseStatusPorcelainV2(output []byte) (*Status, error) {
 			}
 			status.Ordinary = append(status.Ordinary, os)
 		case '2':
-			m := statusPorcelainV2ZRenamedOrCopiedRxFn().FindStringSubmatchIndex(line)
+			m := statusPorcelainV2ZRenamedOrCopiedRegexpFunc().FindStringSubmatchIndex(line)
 			if m == nil {
 				return nil, ParseError(line)
 			}
@@ -208,7 +208,7 @@ func ParseStatusPorcelainV2(output []byte) (*Status, error) {
 			}
 			status.RenamedOrCopied = append(status.RenamedOrCopied, rocs)
 		case 'u':
-			m := statusPorcelainV2ZUnmergedRxFn().FindStringSubmatchIndex(line)
+			m := statusPorcelainV2ZUnmergedRegexpFunc().FindStringSubmatchIndex(line)
 			if m == nil {
 				return nil, ParseError(line)
 			}
@@ -243,7 +243,7 @@ func ParseStatusPorcelainV2(output []byte) (*Status, error) {
 			}
 			status.Unmerged = append(status.Unmerged, us)
 		case '?':
-			m := statusPorcelainV2ZUntrackedRxFn().FindStringSubmatchIndex(line)
+			m := statusPorcelainV2ZUntrackedRegexpFunc().FindStringSubmatchIndex(line)
 			if m == nil {
 				return nil, ParseError(line)
 			}
@@ -252,7 +252,7 @@ func ParseStatusPorcelainV2(output []byte) (*Status, error) {
 			}
 			status.Untracked = append(status.Untracked, us)
 		case '!':
-			m := statusPorcelainV2ZIgnoredRxFn().FindStringSubmatchIndex(line)
+			m := statusPorcelainV2ZIgnoredRegexpFunc().FindStringSubmatchIndex(line)
 			if m == nil {
 				return nil, ParseError(line)
 			}

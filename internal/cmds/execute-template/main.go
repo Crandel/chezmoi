@@ -16,16 +16,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/go-sprout/sprout"
-	sproutencoding "github.com/go-sprout/sprout/registry/encoding"
-	sproutmaps "github.com/go-sprout/sprout/registry/maps"
-	sproutnumeric "github.com/go-sprout/sprout/registry/numeric"
-	sproutregex "github.com/go-sprout/sprout/registry/regex"
-	sproutsemver "github.com/go-sprout/sprout/registry/semver"
-	sproutslices "github.com/go-sprout/sprout/registry/slices"
-	sproutstd "github.com/go-sprout/sprout/registry/std"
-	sproutstrings "github.com/go-sprout/sprout/registry/strings"
-	sprouttime "github.com/go-sprout/sprout/registry/time"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-github/v72/github"
 	"github.com/google/renameio/v2/maybe"
@@ -36,7 +27,7 @@ import (
 var (
 	templateDataFilename = flag.String("data", "", "data filename")
 	outputFilename       = flag.String("output", "", "output filename")
-	nonLetterRx          = regexp.MustCompile(`[^a-z]+`)
+	nonLetterRegexp      = regexp.MustCompile(`[^a-z]+`)
 )
 
 type gitHubClient struct {
@@ -91,7 +82,7 @@ func (c *gitHubClient) gitHubListReleases(ownerRepo string) []*github.Repository
 
 func slugify(s string) string {
 	s = strings.ToLower(s)
-	s = nonLetterRx.ReplaceAllString(s, "-")
+	s = nonLetterRegexp.ReplaceAllString(s, "-")
 	s = strings.Trim(s, "-")
 	return s
 }
@@ -116,19 +107,7 @@ func run() error {
 
 	templateName := path.Base(flag.Arg(0))
 	buffer := &bytes.Buffer{}
-	funcMap := sprout.New(
-		sprout.WithRegistries(
-			sproutencoding.NewRegistry(),
-			sproutmaps.NewRegistry(),
-			sproutnumeric.NewRegistry(),
-			sproutregex.NewRegistry(),
-			sproutsemver.NewRegistry(),
-			sproutslices.NewRegistry(),
-			sproutstd.NewRegistry(),
-			sproutstrings.NewRegistry(),
-			sprouttime.NewRegistry(),
-		),
-	).Build()
+	funcMap := sprig.TxtFuncMap()
 	gitHubClient := newGitHubClient(context.Background())
 	funcMap["exists"] = func(name string) bool {
 		switch _, err := os.Stat(name); {

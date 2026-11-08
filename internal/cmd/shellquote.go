@@ -6,9 +6,9 @@ import (
 	"chezmoi.io/chezmoi/v2/internal/chezmoiregexp"
 )
 
-// nonShellLiteralRxFn is a regular expression that matches anything that is not
-// a shell literal.
-var nonShellLiteralRxFn = chezmoiregexp.MustCompileRegexpOnce(`[^+\-./0-9=A-Z_a-z]`)
+// nonShellLiteralRegexpFunc is a regular expression that matches anything that
+// is not a shell literal.
+var nonShellLiteralRegexpFunc = chezmoiregexp.MustCompileOnce(`[^+\-./0-9=A-Z_a-z]`)
 
 // shellQuote returns s quoted as a shell argument, if necessary.
 func shellQuote(s string) string {
@@ -20,7 +20,7 @@ func shellQuote(s string) string {
 	switch {
 	case s == "":
 		return "''"
-	case nonShellLiteralRxFn().MatchString(s):
+	case nonShellLiteralRegexpFunc().MatchString(s):
 		result := make([]byte, 0, 2+len(s))
 		inSingleQuotes := false
 		for _, b := range []byte(s) {

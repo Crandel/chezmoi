@@ -55,6 +55,8 @@ const (
 	gitStatusError           gitStatus = "error"
 )
 
+var versionRegexpFunc = chezmoiregexp.MustCompileOnce(`^(\d+\.\d+\.\d+)`)
+
 // A check is an individual check.
 type check interface {
 	Name() string                             // Name returns the check's name.
@@ -81,13 +83,13 @@ type argsCheck struct {
 // A binaryCheck checks that a binary called name is installed and optionally at
 // least version minVersion.
 type binaryCheck struct {
-	name        string
-	binaryName  string
-	ifNotSet    checkResult
-	ifNotExist  checkResult
-	versionArgs []string
-	versionRxFn func() *regexp.Regexp
-	minVersion  *semver.Version
+	name              string
+	binaryName        string
+	ifNotSet          checkResult
+	ifNotExist        checkResult
+	versionArgs       []string
+	versionRegexpFunc func() *regexp.Regexp
+	minVersion        *semver.Version
 }
 
 // A buildInfoCheck checks the values of [runtime/debug.BuildInfo].
@@ -262,12 +264,12 @@ func (c *Config) runDoctorCmd(cmd *cobra.Command, args []string) error {
 			args:    editArgs,
 		},
 		&binaryCheck{
-			name:        "git-command",
-			binaryName:  c.Git.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultWarning,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^git\s+version\s+(\d+\.\d+\.\d+)`),
+			name:              "git-command",
+			binaryName:        c.Git.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultWarning,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`^git\s+version\s+(\d+\.\d+\.\d+)`),
 		},
 		&binaryCheck{
 			name:       "merge-command",
@@ -287,87 +289,87 @@ func (c *Config) runDoctorCmd(cmd *cobra.Command, args []string) error {
 			args:    shellArgs,
 		},
 		&binaryCheck{
-			name:        "age-command",
-			binaryName:  c.Age.Command,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`(\d+\.\d+\.\d+\S*)`),
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
+			name:              "age-command",
+			binaryName:        c.Age.Command,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`(\d+\.\d+\.\d+\S*)`),
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
 		},
 		&binaryCheck{
-			name:        "gpg-command",
-			binaryName:  c.GPG.Command,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`(?m)^gpg\s+\(.*?\)\s+(\d+\.\d+\.\d+)`),
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
+			name:              "gpg-command",
+			binaryName:        c.GPG.Command,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`(?m)^gpg\s+\(.*?\)\s+(\d+\.\d+\.\d+)`),
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
 		},
 		&binaryCheck{
-			name:        "pinentry-command",
-			binaryName:  c.PINEntry.Command,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^\S+\s+\(pinentry\)\s+(\d+\.\d+\.\d+)`),
-			ifNotSet:    checkResultInfo,
-			ifNotExist:  checkResultWarning,
+			name:              "pinentry-command",
+			binaryName:        c.PINEntry.Command,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`^\S+\s+\(pinentry\)\s+(\d+\.\d+\.\d+)`),
+			ifNotSet:          checkResultInfo,
+			ifNotExist:        checkResultWarning,
 		},
 		&binaryCheck{
-			name:        "1password-command",
-			binaryName:  c.Onepassword.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: onepasswordVersionRxFn,
-			minVersion:  &onepasswordMinVersion,
+			name:              "1password-command",
+			binaryName:        c.Onepassword.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: onepasswordVersionRegexpFunc,
+			minVersion:        &onepasswordMinVersion,
 		},
 		&binaryCheck{
-			name:        "bitwarden-command",
-			binaryName:  c.Bitwarden.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`(?m)^(\d+\.\d+\.\d+)$`),
+			name:              "bitwarden-command",
+			binaryName:        c.Bitwarden.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`(?m)^(\d+\.\d+\.\d+)$`),
 		},
 		&binaryCheck{
-			name:        "bitwarden-secrets-command",
-			binaryName:  c.BitwardenSecrets.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`Bitwarden\s+Secrets\s+CLI\s+(\d+\.\d+\.\d+)`),
+			name:              "bitwarden-secrets-command",
+			binaryName:        c.BitwardenSecrets.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`Bitwarden\s+Secrets\s+CLI\s+(\d+\.\d+\.\d+)`),
 		},
 		&binaryCheck{
-			name:        "dashlane-command",
-			binaryName:  c.Dashlane.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^(\d+\.\d+\.\d+)`),
+			name:              "dashlane-command",
+			binaryName:        c.Dashlane.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: versionRegexpFunc,
 		},
 		&binaryCheck{
-			name:        "doppler-command",
-			binaryName:  c.Doppler.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^v(\d+\.\d+\.\d+)`),
+			name:              "doppler-command",
+			binaryName:        c.Doppler.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`^v(\d+\.\d+\.\d+)`),
 		},
 		&binaryCheck{
-			name:        "gopass-command",
-			binaryName:  c.Gopass.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: gopassVersionArgs,
-			versionRxFn: gopassVersionRxFn,
-			minVersion:  &gopassMinVersion,
+			name:              "gopass-command",
+			binaryName:        c.Gopass.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       gopassVersionArgs,
+			versionRegexpFunc: gopassVersionRegexpFunc,
+			minVersion:        &gopassMinVersion,
 		},
 		&binaryCheck{
-			name:        "keepassxc-command",
-			binaryName:  c.Keepassxc.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^(\d+\.\d+\.\d+)`),
-			minVersion:  &keepassxcMinVersion,
+			name:              "keepassxc-command",
+			binaryName:        c.Keepassxc.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: versionRegexpFunc,
+			minVersion:        &keepassxcMinVersion,
 		},
 		&fileCheck{
 			name:       "keepassxc-db",
@@ -376,63 +378,63 @@ func (c *Config) runDoctorCmd(cmd *cobra.Command, args []string) error {
 			ifNotExist: checkResultInfo,
 		},
 		&binaryCheck{
-			name:        "keeper-command",
-			binaryName:  c.Keeper.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^Commander\s+Version:\s+(\d+\.\d+\.\d+)`),
+			name:              "keeper-command",
+			binaryName:        c.Keeper.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`^Commander\s+Version:\s+(\d+\.\d+\.\d+)`),
 		},
 		&binaryCheck{
-			name:        "lastpass-command",
-			binaryName:  c.Lastpass.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: lastpassVersionArgs,
-			versionRxFn: lastpassVersionRxFn,
-			minVersion:  &lastpassMinVersion,
+			name:              "lastpass-command",
+			binaryName:        c.Lastpass.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       lastpassVersionArgs,
+			versionRegexpFunc: lastpassVersionRegexpFunc,
+			minVersion:        &lastpassMinVersion,
 		},
 		&binaryCheck{
-			name:        "pass-command",
-			binaryName:  c.Pass.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`(?m)=\s*v(\d+\.\d+\.\d+)`),
+			name:              "pass-command",
+			binaryName:        c.Pass.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`(?m)=\s*v(\d+\.\d+\.\d+)`),
 		},
 		&binaryCheck{
-			name:        "passhole-command",
-			binaryName:  c.Passhole.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^(\d+\.\d+\.\d+)`),
-			minVersion:  &passholeMinVersion,
+			name:              "passhole-command",
+			binaryName:        c.Passhole.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: versionRegexpFunc,
+			minVersion:        &passholeMinVersion,
 		},
 		&binaryCheck{
-			name:        "protonpass-command",
-			binaryName:  c.ProtonPass.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^Proton Pass CLI (\d+\.\d+\.\d+)`),
+			name:              "protonpass-command",
+			binaryName:        c.ProtonPass.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`^Proton Pass CLI (\d+\.\d+\.\d+)`),
 		},
 		&binaryCheck{
-			name:        "rbw-command",
-			binaryName:  c.RBW.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"--version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^rbw\s+(\d+\.\d+\.\d+)`),
-			minVersion:  &rbwMinVersion,
+			name:              "rbw-command",
+			binaryName:        c.RBW.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"--version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`^rbw\s+(\d+\.\d+\.\d+)`),
+			minVersion:        &rbwMinVersion,
 		},
 		&binaryCheck{
-			name:        "vault-command",
-			binaryName:  c.Vault.Command,
-			ifNotSet:    checkResultWarning,
-			ifNotExist:  checkResultInfo,
-			versionArgs: []string{"version"},
-			versionRxFn: chezmoiregexp.MustCompileRegexpOnce(`^Vault\s+v(\d+\.\d+\.\d+)`),
+			name:              "vault-command",
+			binaryName:        c.Vault.Command,
+			ifNotSet:          checkResultWarning,
+			ifNotExist:        checkResultInfo,
+			versionArgs:       []string{"version"},
+			versionRegexpFunc: chezmoiregexp.MustCompileOnce(`^Vault\s+v(\d+\.\d+\.\d+)`),
 		},
 		&binaryCheck{
 			name:       "secret-command",
@@ -515,8 +517,8 @@ func (c *binaryCheck) Run(config *Config) (checkResult, string) {
 	}
 
 	versionBytes := output
-	if c.versionRxFn != nil {
-		match := c.versionRxFn().FindSubmatch(versionBytes)
+	if c.versionRegexpFunc != nil {
+		match := c.versionRegexpFunc().FindSubmatch(versionBytes)
 		if len(match) != 2 {
 			s := fmt.Sprintf("found %s, cannot parse version from %s", pathAbsPath, bytes.TrimSpace(versionBytes))
 			return checkResultWarning, s

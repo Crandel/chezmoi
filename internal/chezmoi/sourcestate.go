@@ -108,11 +108,11 @@ func (t *ExternalType) UnmarshalText(data []byte) error {
 }
 
 var (
-	commentRxFn                       = chezmoiregexp.MustCompileRegexpOnce(`(?:\A|\s+)#.*(?:\r?\n)?$`)
-	lineEndingRxFn                    = chezmoiregexp.MustCompileRegexpOnce(`(?m)(?:\r\n|\r|\n)`)
-	modifyTemplateRxFn                = chezmoiregexp.MustCompileRegexpOnce(`(?m)^.*chezmoi:modify-template.*$(?:\r?\n)?`)
-	templateDirectiveRxFn             = chezmoiregexp.MustCompileRegexpOnce(`(?m)^.*?chezmoi:template:(.*)$(?:\r?\n)?`)
-	templateDirectiveKeyValuePairRxFn = chezmoiregexp.MustCompileRegexpOnce(`\s*(\S+)=("(?:[^"]|\\")*"|\S+)`)
+	commentRegexpFunc                       = chezmoiregexp.MustCompileOnce(`(?:\A|\s+)#.*(?:\r?\n)?$`)
+	lineEndingRegexpFunc                    = chezmoiregexp.MustCompileOnce(`(?m)(?:\r\n|\r|\n)`)
+	modifyTemplateRegexpFunc                = chezmoiregexp.MustCompileOnce(`(?m)^.*chezmoi:modify-template.*$(?:\r?\n)?`)
+	templateDirectiveRegexpFunc             = chezmoiregexp.MustCompileOnce(`(?m)^.*?chezmoi:template:(.*)$(?:\r?\n)?`)
+	templateDirectiveKeyValuePairRegexpFunc = chezmoiregexp.MustCompileOnce(`\s*(\S+)=("(?:[^"]|\\")*"|\S+)`)
 
 	// AppleDouble constants.
 	appleDoubleNamePrefix     = "._"
@@ -1609,7 +1609,7 @@ func (s *SourceState) addPatterns(patternSet *PatternSet, sourceAbsPath AbsPath,
 	lineNumber := 0
 	for line := range bytes.Lines(data) {
 		lineNumber++
-		line = commentRxFn().ReplaceAll(line, nil)
+		line = commentRegexpFunc().ReplaceAll(line, nil)
 		line = bytes.TrimSpace(line)
 		if len(line) == 0 {
 			continue
@@ -2099,7 +2099,7 @@ func (s *SourceState) newModifyTargetStateEntryFunc(
 
 			// If the modifier contains chezmoi:modify-template then execute it
 			// as a template.
-			if matches := modifyTemplateRxFn().FindAllSubmatchIndex(modifierContents, -1); matches != nil {
+			if matches := modifyTemplateRegexpFunc().FindAllSubmatchIndex(modifierContents, -1); matches != nil {
 				sourceFile := sourceRelPath.String()
 				templateContents := removeMatches(modifierContents, matches)
 				var tmpl *Template
