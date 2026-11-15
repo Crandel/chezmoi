@@ -36,9 +36,9 @@ import (
 type checkResult int
 
 const (
-	checkResultOmitted checkResult = -3 // The check was omitted.
-	checkResultFailed  checkResult = -2 // The check could not be completed.
-	checkResultSkipped checkResult = -1 // The check was skipped.
+	checkResultOmitted checkResult = -3 // The check was omitted, i.e. it is not relevant for this system.
+	checkResultFailed  checkResult = -2 // The check ran, but could not be completed.
+	checkResultSkipped checkResult = -1 // The check was skipped because a precondition was not met.
 	checkResultOK      checkResult = 0  // The check completed and did not find any problems.
 	checkResultInfo    checkResult = 1  // The check completed and found something interesting, but not a problem.
 	checkResultWarning checkResult = 2  // The check completed and found something that might indicate a problem.
@@ -157,6 +157,7 @@ type versionCheck struct {
 
 type doctorCmdConfig struct {
 	noNetwork bool
+	check     string
 }
 
 func (c *Config) newDoctorCmd() *cobra.Command {
@@ -177,11 +178,21 @@ func (c *Config) newDoctorCmd() *cobra.Command {
 	}
 
 	doctorCmd.Flags().BoolVar(&c.doctor.noNetwork, "no-network", c.doctor.noNetwork, "do not use network connection")
+	doctorCmd.Flags().StringVar(&c.doctor.check, "check", c.doctor.check, "only run checks matching pattern")
 
 	return doctorCmd
 }
 
 func (c *Config) runDoctorCmd(cmd *cobra.Command, args []string) error {
+	var checkRegexp *regexp.Regexp
+	if c.doctor.check != "" {
+		var err error
+		checkRegexp, err = regexp.Compile(c.doctor.check)
+		if err != nil {
+			return err
+		}
+	}
+
 	homeDirAbsPath, err := chezmoi.HomeDirAbsPath()
 	if err != nil {
 		return err
@@ -235,6 +246,7 @@ func (c *Config) runDoctorCmd(cmd *cobra.Command, args []string) error {
 		hardlinkCheck{},
 		symlinkCheck{},
 		umaskCheck{},
+		binShCheck{},
 		&binaryCheck{
 			name:       "cd-command",
 			binaryName: cdCommand,
@@ -450,6 +462,10 @@ func (c *Config) runDoctorCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	for _, check := range checks {
+		if checkRegexp != nil && !checkRegexp.MatchString(check.Name()) {
+			continue
+		}
+
 		checkResult, message := check.Run(c)
 		if checkResult == checkResultOmitted {
 			continue
